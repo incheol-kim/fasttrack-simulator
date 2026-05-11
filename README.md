@@ -8,7 +8,7 @@
 
 **[🇰🇷 한국어](#-한국어)** · **[🇺🇸 English](#-english)** · **[🇯🇵 日本語](#-日本語)**
 
-- **Demo**: [open `index.html` in a browser]
+- **Live demo**: <https://incheol-kim.github.io/fasttrack-simulator/>
 - **Tech**: Plain HTML + CSS + JavaScript (Canvas 2D). No build step, no dependencies.
 - **Built with** [Claude Code](https://claude.com/claude-code)
 

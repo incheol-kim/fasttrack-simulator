@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Fasttrack — Phase 1 Validation</title>
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --fg: #ddd;
+    --accent: #88c;
+    --pass: #6c6;
+    --fail: #c66;
+    --line: #444;
+    --header: #aaf;
+    --code-bg: #0d0d0d;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  h1 { color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  h2 { color: var(--accent); margin-top: 32px; border-left: 3px solid var(--accent); padding-left: 8px; }
+  pre { background: var(--code-bg); padding: 10px 14px; border-radius: 4px; overflow-x: auto; }
+  table { border-collapse: collapse; margin: 8px 0; min-width: 480px; }
+  th, td { border: 1px solid var(--line); padding: 4px 12px; text-align: right; }
+  th { background: #222; color: var(--header); }
+  caption { caption-side: top; text-align: left; padding: 6px 0; font-weight: bold; color: var(--header); }
+  .pass { color: var(--pass); margin: 2px 0; }
+  .fail { color: var(--fail); margin: 2px 0; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Fasttrack Simulator — Phase 1 Core Model Validation</h1>
+<div id="out"></div>
+
+<script src="src/params.js"></script>
+<script src="src/rng.js"></script>
+<script src="src/derived.js"></script>
+<script src="src/arrival.js"></script>
+<script src="src/simulator.js"></script>
+<script src="src/stats.js"></script>
+<script src="src/test_scenarios.js"></script>
+</body>
+</html>

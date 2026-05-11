@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<title>FastTrack Simulator</title>
+<style>
+  :root {
+    /* Dark theme (default) */
+    --bg: #161616;
+    --panel: #1f1f1f;
+    --panel2: #242424;
+    --fg: #e6e6e6;
+    --muted: #8a8a8a;
+    --accent: #8aa6ff;
+    --pass: #6ec06e;
+    --fail: #f56b6b;
+    --warn: #f5a623;
+    --line: #2f2f2f;
+    --fp: #e6b800;
+    --reg: #3a7dff;
+    --input-bg: #111;
+    --button-bg: #2c2c2c;
+    --button-hover: #383838;
+    --table-head-bg: #1a1a1a;
+    --tooltip-bg: #2a2a2a;
+
+    /* Canvas-only colors (read by renderer.js) */
+    --canvas-bg: #131313;
+    --canvas-ride-bg: #262626;
+    --canvas-ride-border: #4a4a4a;
+    --canvas-icon: #bbb;
+    --canvas-label: #888;
+    --canvas-lane: #2c2c2c;
+    --canvas-fail: #666;
+
+    /* Badge background tints */
+    --badge-calm-bg: #1e3a1e;     --badge-calm-fg: #8fdc8f;
+    --badge-normal-bg: #3a3a1e;   --badge-normal-fg: #d6cf6c;
+    --badge-busy-bg: #4a2e1e;     --badge-busy-fg: #f5a96b;
+    --badge-overload-bg: #4a1e1e; --badge-overload-fg: #f56b6b;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel2: #eef0f4;
+    --fg: #1f2937;
+    --muted: #6b7280;
+    --accent: #2c5fef;
+    --pass: #1f9c46;
+    --fail: #d92d2d;
+    --warn: #c97a00;
+    --line: #d6dae0;
+    --fp: #c98f00;
+    --reg: #2255d4;
+    --input-bg: #f9fafb;
+    --button-bg: #eef0f4;
+    --button-hover: #e2e6ec;
+    --table-head-bg: #f7f8fa;
+    --tooltip-bg: #2c3340;
+
+    --canvas-bg: #f8f9fb;
+    --canvas-ride-bg: #e6e9ef;
+    --canvas-ride-border: #b6bcc6;
+    --canvas-icon: #4b5563;
+    --canvas-label: #6b7280;
+    --canvas-lane: #d6dae0;
+    --canvas-fail: #9ca3af;
+
+    --badge-calm-bg: #d4edda;     --badge-calm-fg: #1d6b34;
+    --badge-normal-bg: #fff3cd;   --badge-normal-fg: #806008;
+    --badge-busy-bg: #ffe1cc;     --badge-busy-fg: #984818;
+    --badge-overload-bg: #fbd6d6; --badge-overload-fg: #9d1e1e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); height: 100%; }
+  body { font: 13px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  h1, h2, h3 { margin: 0; }
+
+  #app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "controls statusbar"
+      "controls panels"
+      "controls stats";
+    height: 100vh;
+  }
+
+  /* Controls panel ────────────────── */
+  #controls {
+    grid-area: controls;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 12px 14px;
+    overflow-y: auto;
+  }
+  .app-title {
+    margin: 0 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .title-actions { display: flex; gap: 4px; }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fg);
+    width: 26px; height: 22px;
+    padding: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    font-weight: bold;
+  }
+  .icon-btn:hover { background: var(--button-hover); border-color: var(--accent); }
+  .theme-toggle { /* legacy alias kept for backward compat in case other CSS rules referenced it */ }
+
+  /* Help modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-backdrop[hidden] { display: none; }
+  .modal-content {
+    max-width: 760px; width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 24px 30px 28px;
+    position: relative;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+    line-height: 1.6;
+  }
+  .modal-close {
+    position: absolute; top: 10px; right: 10px;
+    width: 32px; height: 32px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fg);
+    border-radius: 50%;
+    font-size: 18px; line-height: 1;
+    padding: 0;
+    cursor: pointer;
+  }
+  .modal-close:hover { background: var(--button-hover); border-color: var(--accent); }
+  .modal-content h2 {
+    color: var(--accent);
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+  .modal-content .modal-subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 18px;
+  }
+  .modal-content h3 {
+    color: var(--accent);
+    margin: 20px 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+  }
+  .modal-content p { margin: 6px 0; font-size: 13px; }
+  .modal-content ul { margin: 4px 0 8px; padding-left: 20px; }
+  .modal-content li { font-size: 13px; margin-bottom: 3px; }
+  .modal-content code {
+    background: var(--button-bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    border: 1px solid var(--line);
+  }
+  .dot-blue, .dot-gold {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    vertical-align: middle; margin-right: 2px;
+  }
+  .dot-blue { background: var(--reg); }
+  .dot-gold { background: var(--fp); }
+  .modal-content strong.blue { color: var(--reg); }
+  .modal-content strong.gold { color: var(--fp); }
+  .modal-content strong.fail { color: var(--fail); }
+  .section-title {
+    margin: 8px 0 6px;
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .preset-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .preset-btn {
+    padding: 5px 4px;
+    font-size: 11px;
+    background: var(--button-bg);
+    border: 1px solid var(--line);
+    color: var(--fg);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .preset-btn:hover { background: var(--button-hover); border-color: var(--accent); }
+  .control { margin-bottom: 6px; }
+  .control-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 2px; font-size: 11.5px;
+  }
+  .control-label .label { color: var(--muted); }
+  .control-label .value { color: var(--fg); font-weight: bold; }
+  .control-input { display: flex; gap: 6px; align-items: center; }
+  .control-input input[type=range] {
+    flex: 1; accent-color: var(--accent); margin: 0;
+  }
+  .control-input input[type=number] {
+    width: 76px; background: var(--input-bg); color: var(--fg);
+    border: 1px solid var(--line); padding: 2px 6px; border-radius: 3px;
+    font: inherit;
+  }
+  .control-hint { font-size: 10.5px; color: var(--muted); margin-top: 1px; min-height: 0; line-height: 1.3; }
+
+  /* Status bar ────────────────────── */
+  #statusbar {
+    grid-area: statusbar;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    display: flex; flex-wrap: wrap; gap: 18px;
+    font-size: 12px;
+  }
+  .sb-item { color: var(--muted); }
+  .sb-item b { color: var(--fg); }
+  .fp-color { color: var(--fp); }
+  .reg-color { color: var(--reg); }
+  .fail-color { color: var(--fail); }
+  .muted { color: var(--muted); }
+
+  /* Panels ────────────────────────── */
+  #panels {
+    grid-area: panels;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 0;
+  }
+  #panel-left, #panel-right {
+    padding: 10px 12px;
+    border-right: 1px solid var(--line);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #panel-right { border-right: none; }
+  .panel-header { flex: 0 0 auto; }
+  .panel-title {
+    font-size: 14px; color: var(--accent); margin-bottom: 6px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--line);
+  }
+  .panel-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 2px 14px; margin-bottom: 4px; font-size: 11.5px;
+  }
+  .stat-row { display: flex; justify-content: space-between; gap: 6px; }
+  .stat-row span { color: var(--muted); }
+  .stat-row b { font-size: 12px; }
+  .panel-canvas {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    display: block;
+    background: var(--canvas-bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+
+  /* Buttons / speed toggle ─────────── */
+  button {
+    background: var(--button-bg); color: var(--fg);
+    border: 1px solid var(--line);
+    padding: 6px 12px; cursor: pointer; border-radius: 3px;
+    font: inherit;
+  }
+  button:hover:not(:disabled) { background: var(--button-hover); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: bold; }
+  button.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  .speed-toggle { display: flex; gap: 4px; flex-wrap: wrap; }
+  .speed-toggle button { padding: 4px 10px; flex: 1; }
+  .speed-toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-weight: bold; font-size: 11px;
+  }
+  .badge.calm     { background: var(--badge-calm-bg);     color: var(--badge-calm-fg); }
+  .badge.normal   { background: var(--badge-normal-bg);   color: var(--badge-normal-fg); }
+  .badge.busy     { background: var(--badge-busy-bg);     color: var(--badge-busy-fg); }
+  .badge.overload { background: var(--badge-overload-bg); color: var(--badge-overload-fg); }
+
+  /* Stats panel ──────────────────── */
+  #stats {
+    grid-area: stats;
+    padding: 14px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    max-height: 36vh;
+    overflow-y: auto;
+  }
+  #stats h2 { color: var(--accent); font-size: 14px; display: inline-block; }
+  .stats-note { color: var(--muted); font-size: 11px; margin: 4px 0 8px; line-height: 1.5; }
+  .stats-note b { color: var(--fg); }
+  .final-badge {
+    margin-left: 8px;
+    background: var(--accent); color: #fff;
+    padding: 1px 8px; border-radius: 3px; font-size: 11px;
+  }
+  .headline {
+    display: flex; gap: 22px; margin: 10px 0 14px;
+    padding: 10px 14px; background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  .headline > div { flex: 1; min-width: 0; }
+  .headline .title { font-size: 11px; color: var(--muted); }
+  .headline .value { font-size: 17px; font-weight: bold; margin-top: 2px; }
+  .headline .delta { font-size: 14px; font-weight: bold; margin-left: 6px; }
+  .headline .delta.up { color: var(--fail); }
+  .headline .delta.down { color: var(--pass); }
+
+  .stats-table { border-collapse: collapse; width: 100%; }
+  .stats-table th, .stats-table td {
+    border: 1px solid var(--line); padding: 6px 12px;
+    text-align: left; font-size: 12px;
+  }
+  .stats-table th { background: var(--table-head-bg); color: var(--accent); font-weight: normal; }
+  .stats-table td.label-cell { color: var(--muted); width: 100px; white-space: nowrap; }
+
+  /* Info icons + floating tooltip */
+  .info-icon {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--muted);
+    cursor: help;
+    font-size: 11px;
+    user-select: none;
+  }
+  [data-tip] { cursor: help; }
+  [data-tip]:hover .info-icon { color: var(--accent); }
+  .ft-tooltip {
+    position: fixed;
+    z-index: 1000;
+    background: var(--tooltip-bg);
+    color: #f0f0f0;
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.55;
+    max-width: 340px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    pointer-events: none;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+<div id="help-modal" class="modal-backdrop" hidden>
+  <div class="modal-content" role="dialog" aria-labelledby="help-title">
+    <button class="modal-close" id="btn-help-close">×</button>
+    <div id="help-body"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="controls"></div>
+  <div id="statusbar"></div>
+  <div id="panels">
+    <div id="panel-left">
+      <div class="panel-header" id="panel-header-L"></div>
+      <canvas id="canvas-L" class="panel-canvas"></canvas>
+    </div>
+    <div id="panel-right">
+      <div class="panel-header" id="panel-header-R"></div>
+      <canvas id="canvas-R" class="panel-canvas"></canvas>
+    </div>
+  </div>
+  <div id="stats"></div>
+</div>
+
+<!-- Core (Phase 1) -->
+<script src="src/params.js"></script>
+<script src="src/rng.js"></script>
+<script src="src/derived.js"></script>
+<script src="src/arrival.js"></script>
+<script src="src/simulator.js"></script>
+<script src="src/stats.js"></script>
+
+<!-- Phase 2 -->
+<script src="src/path.js"></script>
+<script src="src/renderer.js"></script>
+<script src="src/theme.js"></script>
+<script src="src/i18n.js"></script>
+<script src="src/app.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/tooltip.js"></script>
+<script src="src/views.js"></script>
+<script src="src/loop.js"></script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Phase 2 — UI Integration Test</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, monospace; background: #1a1a1a; color: #ddd; padding: 20px; }
+  .pass { color: #6c6; } .fail { color: #f66; font-weight: bold; }
+  pre { background: #0d0d0d; padding: 10px; border-radius: 4px; }
+  #app { display: none; }
+</style>
+</head>
+<body>
+<h2>Phase 2 통합 테스트</h2>
+<div id="test-log"></div>
+
+<div id="app">
+  <div id="controls"></div>
+  <div id="statusbar"></div>
+  <div id="panels">
+    <div id="panel-left">
+      <div class="panel-header" id="panel-header-L"></div>
+      <canvas id="canvas-L" class="panel-canvas" style="width:200px;height:200px"></canvas>
+    </div>
+    <div id="panel-right">
+      <div class="panel-header" id="panel-header-R"></div>
+      <canvas id="canvas-R" class="panel-canvas" style="width:200px;height:200px"></canvas>
+    </div>
+  </div>
+  <div id="stats"></div>
+</div>
+
+<script src="src/params.js"></script>
+<script src="src/rng.js"></script>
+<script src="src/derived.js"></script>
+<script src="src/arrival.js"></script>
+<script src="src/simulator.js"></script>
+<script src="src/stats.js"></script>
+<script src="src/path.js"></script>
+<script src="src/renderer.js"></script>
+<script src="src/theme.js"></script>
+<script src="src/i18n.js"></script>
+<script src="src/app.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/tooltip.js"></script>
+<script src="src/views.js"></script>
+<script src="src/loop.js"></script>
+
+<script>
+(function() {
+  const log = document.getElementById('test-log');
+  let pass = 0, fail = 0;
+  function check(cond, msg) {
+    const cls = cond ? 'pass' : 'fail';
+    const mark = cond ? '✓' : '✗';
+    log.insertAdjacentHTML('beforeend', `<div class="${cls}">${mark} ${msg}</div>`);
+    if (cond) pass++; else fail++;
+  }
+  function logInfo(msg) { log.insertAdjacentHTML('beforeend', `<pre>${msg}</pre>`); }
+
+  setTimeout(() => {
+    // 1) Initial state
+    check(FT.app.state.simL !== null, 'simL 생성됨');
+    check(FT.app.state.simR !== null, 'simR 생성됨');
+    check(FT.app.state.arrivals && FT.app.state.arrivals.length === 6000, '도착 6000명 생성');
+
+    // 2) Reset reproducibility
+    FT.app.state.pendingParams.dailyFastPassCount = 0;
+    FT.app.applyAndRestart();
+    check(FT.app.state.appliedParams.dailyFastPassCount === 0, 'applyAndRestart 후 적용값 반영');
+    while (!FT.app.state.simL.done) { FT.app.state.simL.step(600); FT.app.state.simR.step(600); }
+    FT.app.state.statsL.pullFrom(FT.app.state.simL);
+    FT.app.state.statsR.pullFrom(FT.app.state.simR);
+    const sumLFull = FT.app.state.statsL.summary();
+
+    FT.app.reset();
+    while (!FT.app.state.simL.done) { FT.app.state.simL.step(600); FT.app.state.simR.step(600); }
+    FT.app.state.statsL.pullFrom(FT.app.state.simL);
+    FT.app.state.statsR.pullFrom(FT.app.state.simR);
+    const sumL2 = FT.app.state.statsL.summary();
+    check(Math.abs(sumLFull.all_regular.mean - sumL2.all_regular.mean) < 0.001,
+      `같은 시드 reset → 동일 결과 재현 (${sumLFull.all_regular.mean.toFixed(3)} vs ${sumL2.all_regular.mean.toFixed(3)})`);
+
+    // 3) New bucket counters: mid-day snapshot
+    FT.app.state.pendingParams.dailyFastPassCount = 800;
+    FT.app.applyAndRestart();
+    // Step partway through (only 4 hours = 14400 sec, into mid-peak)
+    FT.app.state.simL.step(14400);
+    FT.app.state.simR.step(14400);
+    FT.app.state.statsL.pullFrom(FT.app.state.simL);
+    FT.app.state.statsR.pullFrom(FT.app.state.simR);
+
+    const aL = FT.app.state.simL.arrived;
+    const wL = FT.app.state.simL.waiting;
+    const aR = FT.app.state.simR.arrived;
+    const wR = FT.app.state.simR.waiting;
+    logInfo(`14:00 시점 (피크 중반):
+좌측 arrived: ${JSON.stringify(aL)}
+좌측 waiting: ${JSON.stringify(wL)}
+우측 arrived: ${JSON.stringify(aR)}
+우측 waiting: ${JSON.stringify(wR)}`);
+
+    // Verify counters consistency
+    const sumL_mid = FT.app.state.statsL.summary();
+    const sumR_mid = FT.app.state.statsR.summary();
+    check(aL.peak_regular === sumL_mid.peak_regular.n + wL.peak_regular,
+      `arrival = boarded + waiting (좌-피크-일반): ${aL.peak_regular} = ${sumL_mid.peak_regular.n} + ${wL.peak_regular}`);
+    check(aL.offpeak_regular === sumL_mid.offpeak_regular.n + wL.offpeak_regular,
+      `arrival = boarded + waiting (좌-비피크-일반)`);
+    check(aR.peak_fastpass === sumR_mid.peak_fastpass.n + wR.peak_fastpass,
+      `arrival = boarded + waiting (우-피크-FP): ${aR.peak_fastpass} = ${sumR_mid.peak_fastpass.n} + ${wR.peak_fastpass}`);
+    check(aR.offpeak_fastpass === sumR_mid.offpeak_fastpass.n + wR.offpeak_fastpass,
+      `arrival = boarded + waiting (우-비피크-FP)`);
+
+    // 4) Run to completion: counters should drain
+    while (!FT.app.state.simL.done) { FT.app.state.simL.step(600); FT.app.state.simR.step(600); }
+    FT.app.state.statsL.pullFrom(FT.app.state.simL);
+    FT.app.state.statsR.pullFrom(FT.app.state.simR);
+    const wLClose = FT.app.state.simL.waiting;
+    const wRClose = FT.app.state.simR.waiting;
+    const sumW = (w) => w.peak_regular + w.offpeak_regular + w.peak_fastpass + w.offpeak_fastpass;
+    check(sumW(wLClose) === 0, `폐장 후 waiting 좌측 = 0 (${sumW(wLClose)})`);
+    check(sumW(wRClose) === 0, `폐장 후 waiting 우측 = 0 (${sumW(wRClose)})`);
+
+    // After close: arrived = boarded + failed (per bucket)
+    const sumL_final = FT.app.state.statsL.summary();
+    const aLClose = FT.app.state.simL.arrived;
+    const totalArrL = aLClose.peak_regular + aLClose.offpeak_regular;
+    const totalBoardL = sumL_final.all_regular.n;
+    const totalFailL = sumL_final.failed.regular;
+    check(totalArrL === totalBoardL + totalFailL,
+      `좌측 총도착 = 탑승완료 + 실패 (${totalArrL} = ${totalBoardL} + ${totalFailL})`);
+
+    // 5) Same seed → same arrived counts
+    FT.app.reset();
+    while (!FT.app.state.simL.done) { FT.app.state.simL.step(600); FT.app.state.simR.step(600); }
+    const aL2 = FT.app.state.simL.arrived;
+    check(aLClose.peak_regular === aL2.peak_regular,
+      `같은 시드 → 같은 버킷 도착 카운트 (${aLClose.peak_regular} = ${aL2.peak_regular})`);
+
+    log.insertAdjacentHTML('beforeend', `<h3>${pass} 통과 / ${fail} 실패</h3>`);
+    document.title = `Phase2: ${pass} pass / ${fail} fail`;
+  }, 50);
+})();
+</script>
+</body>
+</html>

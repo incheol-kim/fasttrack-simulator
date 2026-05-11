@@ -179,7 +179,7 @@ FT.i18n = (function () {
 
       // Help modal (HTML content)
       'help.title':    '놀이공원 패스트트랙 시뮬레이터',
-      'help.subtitle': '패스트트랙권(매직패스 등)이 일반 손님 대기시간에 끼치는 영향을 시각화합니다.',
+      'help.subtitle': '패스트트랙권이 일반 손님 대기시간에 끼치는 영향을 시각화합니다.',
       'help.close': '닫기',
       'help.section.question':  '이 프로그램이 답하는 질문',
       'help.section.behavior':  '핵심 동작',
@@ -187,7 +187,7 @@ FT.i18n = (function () {
       'help.section.insight':   '핵심 인사이트',
       'help.section.tips':      '사용 팁',
       'help.html': `
-        <p>롯데월드의 매직패스 같은 <em>패스트트랙권</em>을 운영하면, 패스권을 사지 <strong>않은 일반 손님</strong>의 대기시간은 얼마나 더 늘어날까? — 이 차이를 동일 조건의 좌·우 시뮬레이션으로 정량화합니다.</p>
+        <p>놀이공원에서 <em>패스트트랙권</em>을 운영하면, 패스권을 사지 <strong>않은 일반 손님</strong>의 대기시간은 얼마나 더 늘어날까? — 이 차이를 동일 조건의 좌·우 시뮬레이션으로 정량화합니다.</p>
 
         <h3>{{S.behavior}}</h3>
         <p>좌·우 두 시뮬레이션이 <strong>동일한 손님 도착 시퀀스</strong>를 공유합니다. 차이는 단 하나, "이번에 도착한 손님이 패스권을 가졌으면 어느 줄에 서느냐"뿐입니다.</p>
@@ -385,7 +385,7 @@ FT.i18n = (function () {
       'sim.seconds':  '{S}sec',
 
       'help.title':    'Amusement Park FastPass Simulator',
-      'help.subtitle': 'Visualizes how a FastPass system (Magic Pass, etc.) affects regular guests\' wait time.',
+      'help.subtitle': 'Visualizes how a FastPass system affects regular guests\' wait time.',
       'help.close': 'Close',
       'help.section.question':  'What this program answers',
       'help.section.behavior':  'How it works',
@@ -393,7 +393,7 @@ FT.i18n = (function () {
       'help.section.insight':   'Key insights',
       'help.section.tips':      'Tips',
       'help.html': `
-        <p>When an amusement park runs a <em>FastPass</em> system (like Lotte World\'s Magic Pass), how much longer do <strong>regular guests without a pass</strong> have to wait? This simulator quantifies that gap by running two side-by-side scenarios on the exact same arrival sequence.</p>
+        <p>When an amusement park runs a <em>FastPass</em> system, how much longer do <strong>regular guests without a pass</strong> have to wait? This simulator quantifies that gap by running two side-by-side scenarios on the exact same arrival sequence.</p>
 
         <h3>{{S.behavior}}</h3>
         <p>The left and right simulators share the <strong>same arrival sequence</strong>. The only difference is: "if this newly-arrived guest holds a FastPass, which line do they join?"</p>
@@ -591,7 +591,7 @@ FT.i18n = (function () {
       'sim.seconds':  '{S}秒',
 
       'help.title':    'テーマパーク ファストパス シミュレーター',
-      'help.subtitle': 'ファストパス(マジックパス等)が一般来場者の待ち時間に与える影響を可視化します。',
+      'help.subtitle': 'ファストパスが一般来場者の待ち時間に与える影響を可視化します。',
       'help.close': '閉じる',
       'help.section.question':  'このプログラムが答える問い',
       'help.section.behavior':  '基本動作',
@@ -599,7 +599,7 @@ FT.i18n = (function () {
       'help.section.insight':   '主要な洞察',
       'help.section.tips':      '使い方のヒント',
       'help.html': `
-        <p>ロッテワールドのマジックパスのような<em>ファストパス券</em>を運用すると、パスを買わない<strong>一般来場者</strong>の待ち時間はどれだけ長くなるか? — この差を同条件の左・右シミュレーションで定量化します。</p>
+        <p>遊園地で<em>ファストパス券</em>を運用すると、パスを買わない<strong>一般来場者</strong>の待ち時間はどれだけ長くなるか? — この差を同条件の左・右シミュレーションで定量化します。</p>
 
         <h3>{{S.behavior}}</h3>
         <p>左・右の2つのシミュレーションは<strong>同じ到着系列</strong>を共有します。違いはただ一つ、「今到着した人がパスを持っていたら、どちらの列に並ぶか」だけです。</p>

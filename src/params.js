@@ -16,7 +16,7 @@ FT.DEFAULT_PARAMS = {
 
 FT.clampParams = function(raw) {
   const p = { ...raw };
-  p.capacityPerCycle = Math.max(4, Math.min(60, Math.round(p.capacityPerCycle)));
+  p.capacityPerCycle = Math.max(4, Math.min(100, Math.round(p.capacityPerCycle)));
   p.cycleDurationSec = Math.max(30, Math.min(900, Math.round(p.cycleDurationSec)));
   p.fastPassPercentPerCycle = Math.max(0, Math.min(100, Math.round(p.fastPassPercentPerCycle)));
   p.dailyVisitors = Math.max(100, Math.min(50000, Math.round(p.dailyVisitors)));

@@ -12,7 +12,7 @@ FT.ui = (function () {
     { id: 'dailyVisitors',            kind: 'number', min: 100,  max: 50000, step: 100,
       hint: () => T('hint.safeVisitors', { N: FT.safeDailyVisitors(FT.app.state.pendingParams).toLocaleString() }) },
     { id: 'dailyFastPassCount',       kind: 'number', min: 0,    max: 50000, step: 100 },
-    { id: 'capacityPerCycle',         kind: 'number', min: 4,    max: 60,    step: 1 },
+    { id: 'capacityPerCycle',         kind: 'number', min: 4,    max: 100,   step: 1 },
     { id: 'fastPassPercentPerCycle',  kind: 'number', min: 0,    max: 100,   step: 1,
       hint: () => T('hint.fpSlots', {
         SLOTS: FT.fastPassSlotsPerCycle(FT.app.state.pendingParams),

@@ -195,11 +195,26 @@ window.FT = window.FT || {};
       if (this.side === 'R' && this.fpPath && this.modeFp === 'dots') upsert(sim.fastQueue, this.fpPath);
       if (this.modeReg === 'dots') upsert(sim.regularQueue, this.regPath);
 
-      // Newly boarded → fly into ride center
+      // Newly boarded → fly into ride center as individual dots.
+      // If no visual exists yet (block mode, or arrived+boarded within one step),
+      // spawn one on the fly at the front of the relevant queue path so the
+      // boarding animation works regardless of how the queue is rendered.
       while (this.boardCursor < sim.boarded.length) {
         const p = sim.boarded[this.boardCursor++];
-        const v = this.visual.get(p.id);
-        if (v) {
+        let v = this.visual.get(p.id);
+        if (!v) {
+          const path = (p.queue === 'fastpass' && this.side === 'R') ? this.fpPath : this.regPath;
+          const xy = path ? path.posToXY(0) : { x: this.ride.cx, y: this.ride.cy + 30 };
+          v = {
+            x: xy.x + (Math.random() - 0.5) * 4,
+            y: xy.y + (Math.random() - 0.5) * 4,
+            tx: this.ride.cx, ty: this.ride.cy,
+            colorRole: p.hasFastPass ? 'fp' : 'reg',
+            state: 'boarding',
+            t0: now,
+          };
+          this.visual.set(p.id, v);
+        } else {
           v.state = 'boarding';
           v.tx = this.ride.cx;
           v.ty = this.ride.cy;
@@ -338,8 +353,12 @@ window.FT = window.FT || {};
       return { x0, y0, width, maxH };
     }
 
-    // Render a queue as colored blocks. Each block shows the FP/Reg ratio
-    // as a left-anchored gold band (5% increments, min 1px when > 0).
+    // Render a queue as blocks. Each block has TWO regions side-by-side:
+    //   - LEFT: yellow (FP holders), width ∝ overall FP ratio in this queue
+    //   - RIGHT: blue (regular guests), width ∝ rest
+    // Each region's HEIGHT fills BOTTOM-UP based on the actual count in that
+    // chunk of the queue divided by the per-block max for that region.
+    // A thin outline shows the block extents even when partially empty.
     _drawBlocks(queue, area) {
       const ctx = this.ctx;
       const blocksPerRow = Math.max(1, Math.floor(area.width / BLOCK_STRIDE_X));
@@ -348,37 +367,46 @@ window.FT = window.FT || {};
       const N = peoplePerBlock(queue.length, maxBlocks);
       const blockCount = Math.min(maxBlocks, Math.ceil(queue.length / N));
 
-      ctx.font = '8.5px ui-monospace, monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      // Overall FP ratio in this queue → width split + height-max normalization.
+      let totalFP = 0;
+      for (let i = 0; i < queue.length; i++) if (queue[i].hasFastPass) totalFP++;
+      const fpRatio = queue.length > 0 ? totalFP / queue.length : 0;
+      let maxFpPerBlock  = Math.round(N * fpRatio);
+      if (totalFP > 0 && maxFpPerBlock === 0) maxFpPerBlock = 1;
+      if (totalFP === queue.length) maxFpPerBlock = N;
+      const maxRegPerBlock = N - maxFpPerBlock;
+      const fpW  = (maxFpPerBlock  / N) * BLOCK_W;
+      const regW = BLOCK_W - fpW;
 
       for (let b = 0; b < blockCount; b++) {
         const start = b * N;
         const end = Math.min(queue.length, start + N);
-        const size = end - start;
-        // Count FP in this chunk
         let fpCount = 0;
         for (let i = start; i < end; i++) if (queue[i].hasFastPass) fpCount++;
-        const p = fpCount / size;
-        // 5% rounding-up; min 1px if any FP present
-        const fpCells = p > 0 ? Math.max(1, Math.ceil(p * 20)) : 0;
-        const goldW = Math.min(BLOCK_W, fpCells);
+        const regCount = (end - start) - fpCount;
 
-        // Snake column index
         const row = Math.floor(b / blocksPerRow);
         const inRow = b - row * blocksPerRow;
         const col = (row % 2 === 0) ? inRow : (blocksPerRow - 1 - inRow);
         const x = area.x0 + col * BLOCK_STRIDE_X;
         const y = area.y0 + row * BLOCK_STRIDE_Y;
 
-        // Gold band (FP portion) + blue (regular portion)
-        if (goldW > 0) {
+        // Block frame (so partially filled / nearly empty blocks remain visible)
+        ctx.strokeStyle = this.theme.lane;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, BLOCK_W - 1, BLOCK_H - 1);
+
+        // FP fill — yellow rises from bottom of left sub-region
+        if (fpW > 0 && maxFpPerBlock > 0 && fpCount > 0) {
+          const h = Math.min(BLOCK_H, (fpCount / maxFpPerBlock) * BLOCK_H);
           ctx.fillStyle = this.theme.fp;
-          ctx.fillRect(x, y, goldW, BLOCK_H);
+          ctx.fillRect(x, y + BLOCK_H - h, fpW, h);
         }
-        if (goldW < BLOCK_W) {
+        // Regular fill — blue rises from bottom of right sub-region
+        if (regW > 0 && maxRegPerBlock > 0 && regCount > 0) {
+          const h = Math.min(BLOCK_H, (regCount / maxRegPerBlock) * BLOCK_H);
           ctx.fillStyle = this.theme.reg;
-          ctx.fillRect(x + goldW, y, BLOCK_W - goldW, BLOCK_H);
+          ctx.fillRect(x + fpW, y + BLOCK_H - h, regW, h);
         }
       }
 

@@ -13,6 +13,7 @@ FT.i18n = (function () {
       'btn.help.tip': '이 프로그램에 대한 상세 설명',
       'btn.theme.tip': '다크/라이트 모드 전환',
       'btn.lang.tip': '언어 변경 (한/EN/日)',
+      'btn.github.tip': '프로젝트 GitHub 저장소 열기',
 
       // Sections
       'section.presets': '시나리오 프리셋',
@@ -241,6 +242,7 @@ FT.i18n = (function () {
       'btn.help.tip': 'Open the program guide',
       'btn.theme.tip': 'Toggle dark / light mode',
       'btn.lang.tip': 'Change language (한/EN/日)',
+      'btn.github.tip': 'Open the project on GitHub',
 
       'section.presets': 'Scenario presets',
       'section.params': 'Parameters',
@@ -447,6 +449,7 @@ FT.i18n = (function () {
       'btn.help.tip': 'プログラムの詳細説明を開く',
       'btn.theme.tip': 'ダーク／ライト モード切替',
       'btn.lang.tip': '言語切替 (한/EN/日)',
+      'btn.github.tip': 'プロジェクトの GitHub リポジトリを開く',
 
       'section.presets': 'シナリオ プリセット',
       'section.params':  'パラメータ',

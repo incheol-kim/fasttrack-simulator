@@ -113,6 +113,10 @@ FT.ui = (function () {
       <div id="warn-banner" style="margin-top:8px;color:var(--warn);font-size:11px;display:none"></div>
     `;
     root.appendChild(actions);
+
+    // GitHub link lives outside #controls (fixed top-right) — refresh its tip on language change.
+    const gh = document.getElementById('btn-github');
+    if (gh) gh.setAttribute('data-tip', T('btn.github.tip'));
   }
 
   function renderControl(def) {

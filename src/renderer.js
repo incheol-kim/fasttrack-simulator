@@ -196,18 +196,24 @@ window.FT = window.FT || {};
       if (this.modeReg === 'dots') upsert(sim.regularQueue, this.regPath);
 
       // Newly boarded → fly into ride center as individual dots.
-      // If no visual exists yet (block mode, or arrived+boarded within one step),
-      // spawn one on the fly at the front of the relevant queue path so the
-      // boarding animation works regardless of how the queue is rendered.
+      // If no visual exists yet (block mode, or arrived+boarded within one
+      // step), spawn one on the fly. To make the count of moving dots match
+      // the actual number of boarders, place each spawn at a DIFFERENT path
+      // index — they were at consecutive queue positions before boarding,
+      // so they fan out along the front of the queue and then converge on
+      // the ride. Counters reset every update() call so back-to-back cycles
+      // get their own spread.
+      let fpSpawnIdx = 0, regSpawnIdx = 0;
       while (this.boardCursor < sim.boarded.length) {
         const p = sim.boarded[this.boardCursor++];
         let v = this.visual.get(p.id);
         if (!v) {
-          const path = (p.queue === 'fastpass' && this.side === 'R') ? this.fpPath : this.regPath;
-          const xy = path ? path.posToXY(0) : { x: this.ride.cx, y: this.ride.cy + 30 };
+          const useFpPath = (p.queue === 'fastpass' && this.side === 'R');
+          const path = useFpPath ? this.fpPath : this.regPath;
+          const idx  = useFpPath ? fpSpawnIdx++ : regSpawnIdx++;
+          const xy = path ? path.posToXY(idx) : { x: this.ride.cx, y: this.ride.cy + 30 };
           v = {
-            x: xy.x + (Math.random() - 0.5) * 4,
-            y: xy.y + (Math.random() - 0.5) * 4,
+            x: xy.x, y: xy.y,
             tx: this.ride.cx, ty: this.ride.cy,
             colorRole: p.hasFastPass ? 'fp' : 'reg',
             state: 'boarding',
